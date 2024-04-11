@@ -1,0 +1,3 @@
+[submodule "protocol/pb/dbservice_protofile"]
+	path = protocol/pb/dbservice_protofile
+	url = git@github.com:Justice-League-Lab/dbservice_protofile.git
