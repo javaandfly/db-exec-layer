@@ -1,4 +1,4 @@
-module db-exec-layer
+module my-project/db-exec-layer
 
 go 1.22.1
 
@@ -9,7 +9,8 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.18.2
 	github.com/urfave/cli/v2 v2.27.1
-	gorm.io/gorm v1.25.4
+	google.golang.org/protobuf v1.33.0
+	gorm.io/gorm v1.25.9
 )
 
 require (
