@@ -1,4 +1,4 @@
-module my-project/db-exec-layer
+module db-exec-layer
 
 go 1.20
 
