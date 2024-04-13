@@ -25,9 +25,17 @@ type LogConfig struct {
 	LogName     string `mapstructure:"log_name"`
 }
 
+type ServerConfig struct {
+	ReusePort    bool  `mapstructure:"reuse_port"`
+	Multicore    bool  `mapstructure:"multicore"`
+	TCPKeepAlive int64 `mapstructure:"tcp_keep_alive"`
+	Port         int   `mapstructure:"port"`
+}
+
 type DbLayerConfig struct {
 	Log            LogConfig      `mapstructure:"log"`
 	DatabaseConfig DatabaseSource `mapstructure:"db"`
+	ServerConfig   ServerConfig   `mapstructure:"server"`
 }
 
 func ResolveConfig(path string, cfg interface{}) error {

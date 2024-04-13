@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
 	"db-exec-layer/config"
 	"db-exec-layer/pkg/log"
+	"db-exec-layer/protocol"
 	"fmt"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"os"
 
+	"github.com/panjf2000/gnet/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -61,14 +67,28 @@ func Start(c *cli.Context) error {
 	// 	return err
 	// }
 
-	// ctx, cancel := context.WithCancel(context.Background())
-	// // wait for signals
-	// sigs := make(chan os.Signal, 1)
-	// signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	// go func() {
-	// 	<-sigs
-	// 	cancel()
-	// }()
+	_, cancel := context.WithCancel(context.Background())
+	// wait for signals
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	options := []gnet.Option{
+		gnet.WithReusePort(cfg.ServerConfig.ReusePort),
+		gnet.WithMulticore(cfg.ServerConfig.Multicore),
+		gnet.WithTCPKeepAlive(time.Second * time.Duration(cfg.ServerConfig.TCPKeepAlive)),
+	}
+
+	tcpServer := protocol.NewTCPServer(cfg.ServerConfig.Port)
+
+	err = protocol.Run(tcpServer, fmt.Sprintf("tcp://:%d", cfg.ServerConfig.Port), options...)
+	if err != nil {
+		logrus.Errorf("启动失败:%+v", err)
+		return err
+	}
 
 	return err
 }
