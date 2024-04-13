@@ -3,14 +3,19 @@ log:
    log_level: debug
    log_name: ticket.log
 db:
-  driver_name: mysql
-  host: 127.0.0.1
-  port: 3306
-  database: "mubi"
-  username: root
-  password: 123456
-  charset: utf8
-  max_open_conns: 20
-  max_idle_conns: 10
-  conn_max_lifetime: -1
-  debug: true
+   driver_name: mysql
+   host: 127.0.0.1
+   port: 3306
+   database: "mubi"
+   username: root
+   password: 123456
+   charset: utf8
+   max_open_conns: 20
+   max_idle_conns: 10
+   conn_max_lifetime: -1
+   debug: true
+server:
+   reuse_port: true
+   multicore: true
+   tcp_keep_alive: 90
+   port: 9000
