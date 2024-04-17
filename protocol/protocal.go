@@ -12,7 +12,7 @@ import (
 )
 
 type ProtocolData struct {
-	DataLength uint32
+	DataLength int32
 	ProtoId    int32
 	Data       []byte
 
@@ -53,8 +53,8 @@ func (tcpfhp *TCPProtocol) Decode(c gnet.Conn) (*ProtocolData, error) {
 
 		//数据长度
 		bytesBuffer := bytes.NewBuffer(headData)
-		binary.Read(bytesBuffer, binary.BigEndian, &newConContext.DataLength)
-		binary.Read(bytesBuffer, binary.BigEndian, &newConContext.ProtoId)
+		binary.Read(bytesBuffer, binary.LittleEndian, &newConContext.DataLength)
+		binary.Read(bytesBuffer, binary.LittleEndian, &newConContext.ProtoId)
 
 		c.SetContext(newConContext)
 	}
@@ -68,14 +68,14 @@ func (tcpfhp *TCPProtocol) Decode(c gnet.Conn) (*ProtocolData, error) {
 		tempBufferLength := c.InboundBuffered() // 当前已有多少数据
 		frameDataLength := int(protocolData.DataLength)
 
-		if tempBufferLength < frameDataLength {
+		if tempBufferLength > frameDataLength {
 			return nil, ErrIncompletePacket
 		}
 
 		// 数据够了
-		data, _ := c.Next(frameDataLength)
+		data, _ := c.Next(tempBufferLength)
 
-		copyData := make([]byte, frameDataLength) // 复制
+		copyData := make([]byte, tempBufferLength) // 复制
 		copy(copyData, data)
 
 		protocolData.Data = copyData
@@ -92,11 +92,11 @@ func (tcpfhp *TCPProtocol) DecodeFrame(frame []byte) (*ProtocolData, error) {
 	//数据长度
 	bytesBuffer := bytes.NewBuffer(frame)
 
-	if err := binary.Read(bytesBuffer, binary.BigEndian, &data.ProtoId); err != nil {
+	if err := binary.Read(bytesBuffer, binary.LittleEndian, &data.DataLength); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(bytesBuffer, binary.BigEndian, &data.DataLength); err != nil {
+	if err := binary.Read(bytesBuffer, binary.LittleEndian, &data.ProtoId); err != nil {
 		return nil, err
 	}
 
@@ -118,8 +118,8 @@ func (tcpfhp *TCPProtocol) ClientDecode(rawConn net.Conn) (*ProtocolData, error)
 
 	//数据长度
 	bytesBuffer := bytes.NewBuffer(headData)
-	binary.Read(bytesBuffer, binary.BigEndian, &newPackage.ProtoId)
-	binary.Read(bytesBuffer, binary.BigEndian, &newPackage.DataLength)
+	binary.Read(bytesBuffer, binary.LittleEndian, &newPackage.ProtoId)
+	binary.Read(bytesBuffer, binary.LittleEndian, &newPackage.DataLength)
 
 	if newPackage.DataLength < 1 {
 		return &newPackage, nil
@@ -128,7 +128,7 @@ func (tcpfhp *TCPProtocol) ClientDecode(rawConn net.Conn) (*ProtocolData, error)
 	data := make([]byte, newPackage.DataLength)
 	dataNum, err2 := io.ReadFull(rawConn, data)
 
-	if uint32(dataNum) != newPackage.DataLength {
+	if int32(dataNum) != newPackage.DataLength {
 		return nil, fmt.Errorf("read data error, %v", err2)
 	}
 
@@ -146,19 +146,19 @@ func (tcpfhp *TCPProtocol) EncodeWrite(protoId int32, data []byte, conn net.Conn
 
 	pdata := ProtocolData{}
 	pdata.ProtoId = protoId
-	pdata.DataLength = uint32(len(data))
+	pdata.DataLength = int32(len(data))
 	pdata.Data = data
 
-	if err := binary.Write(conn, binary.BigEndian, &pdata.ProtoId); err != nil {
+	if err := binary.Write(conn, binary.LittleEndian, &pdata.ProtoId); err != nil {
 		return fmt.Errorf("encodeWrite version error , %v", err)
 	}
 
-	if err := binary.Write(conn, binary.BigEndian, &pdata.DataLength); err != nil {
+	if err := binary.Write(conn, binary.LittleEndian, &pdata.DataLength); err != nil {
 		return fmt.Errorf("encodeWrite datalength error , %v", err)
 	}
 
 	if pdata.DataLength > 0 {
-		if err := binary.Write(conn, binary.BigEndian, &pdata.Data); err != nil {
+		if err := binary.Write(conn, binary.LittleEndian, &pdata.Data); err != nil {
 			return fmt.Errorf("encodeWrite data error , %v", err)
 		}
 	}
@@ -174,23 +174,23 @@ func (tcpfhp *TCPProtocol) Encode(c gnet.Conn, buf []byte) ([]byte, error) {
 func (tcpfhp *TCPProtocol) EncodeData(protoId int32, data []byte) ([]byte, error) {
 	pdata := ProtocolData{}
 	pdata.ProtoId = protoId
-	pdata.DataLength = uint32(len(data))
+	pdata.DataLength = int32(len(data)) + DefaultHeadLength
 	pdata.Data = data
 
 	result := make([]byte, 0)
 
 	buffer := bytes.NewBuffer(result)
 
-	if err := binary.Write(buffer, binary.BigEndian, &pdata.ProtoId); err != nil {
-		return nil, fmt.Errorf("encode version error , %v", err)
-	}
-
-	if err := binary.Write(buffer, binary.BigEndian, &pdata.DataLength); err != nil {
+	if err := binary.Write(buffer, binary.LittleEndian, &pdata.DataLength); err != nil {
 		return nil, fmt.Errorf("encode datalength error , %v", err)
 	}
 
+	if err := binary.Write(buffer, binary.LittleEndian, &pdata.ProtoId); err != nil {
+		return nil, fmt.Errorf("encode version error , %v", err)
+	}
+
 	if pdata.DataLength > 0 {
-		if err := binary.Write(buffer, binary.BigEndian, &pdata.Data); err != nil {
+		if err := binary.Write(buffer, binary.LittleEndian, &pdata.Data); err != nil {
 			return nil, fmt.Errorf("encode data error , %v", err)
 		}
 	}

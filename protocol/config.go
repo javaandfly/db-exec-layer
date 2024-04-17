@@ -1,9 +1,7 @@
 package protocol
 
 import (
-	"bytes"
 	"errors"
-	"sync"
 )
 
 const (
@@ -25,18 +23,3 @@ const (
 var ErrProtocolVersion = errors.New("PROTOCOL_VERSION error")
 var ErrIncompletePacket = errors.New("incomplete packet")
 var ErrContext = errors.New("context error")
-
-var bytesBufferPool = sync.Pool{
-	New: func() any {
-		return new(bytes.Buffer)
-	},
-}
-
-func isCorrectAction(actionType uint16) bool {
-	switch actionType {
-	case ACTION_PING, ACTION_PONG, ACTION_DATA:
-		return true
-	default:
-		return false
-	}
-}

@@ -13,6 +13,8 @@ type HandlerContext struct {
 	PingProtocolData *pb.DB_PING_REQ
 
 	Conn gnet.Conn
+
+	Server *TcpDBServer
 }
 
 func (ctx *HandlerContext) Deadline() (deadline time.Time, ok bool) {
