@@ -50,12 +50,14 @@ func (tcphs *TcpDBServer) OnTick() (delay time.Duration, action gnet.Action) {
 }
 
 func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
+
 	protocol := NewTCPProtocol()
 
 	protocolData, err := protocol.Decode(c)
 
 	if err != nil {
 		if err == ErrIncompletePacket {
+			logrus.Errorf("ErrIncompletePacket Decode error :%+v\n", err)
 			return gnet.None
 		}
 		logrus.Errorf("Protocol Decode error :%+v\n", err)
@@ -64,6 +66,9 @@ func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	}
 
 	if protocolData == nil {
+
+		logrus.Errorf("Protocol data is nil :%+v\n", err)
+
 		return gnet.None
 	}
 
@@ -72,6 +77,7 @@ func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 		handlerData := &HandlerContext{}
 		handlerData.ProtocolData = protocolData
 		handlerData.Conn = c
+		handlerData.Server = s
 
 		s.Handler(handlerData)
 	})

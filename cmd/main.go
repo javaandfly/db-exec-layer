@@ -72,6 +72,7 @@ func Start(c *cli.Context) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
+
 		<-sigs
 		cancel()
 	}()
