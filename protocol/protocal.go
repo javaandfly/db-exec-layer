@@ -37,7 +37,7 @@ func (tcpfhp *TCPProtocol) getHeadLength() int {
 }
 
 // server端 gnet input 数据 decode
-func (tcpfhp *TCPProtocol) Decode(c gnet.Conn) (*ProtocolData, error) {
+func (tcpfhp *TCPProtocol) DecodeProtocolData(c gnet.Conn) (*ProtocolData, error) {
 	curConContext := c.Context()
 
 	if curConContext == nil {
@@ -59,31 +59,34 @@ func (tcpfhp *TCPProtocol) Decode(c gnet.Conn) (*ProtocolData, error) {
 		c.SetContext(newConContext)
 	}
 
+	protocolData := &ProtocolData{}
+
 	//解析协议数据
-	if protocolData, ok := c.Context().(*ProtocolData); !ok {
+	protocolData, ok := c.Context().(*ProtocolData)
+	if !ok {
 		c.SetContext(nil)
 
 		return nil, ErrContext
-	} else {
-		tempBufferLength := c.InboundBuffered() // 当前已有多少数据
-		frameDataLength := int(protocolData.DataLength)
-
-		if tempBufferLength > frameDataLength {
-			return nil, ErrIncompletePacket
-		}
-
-		// 数据够了
-		data, _ := c.Next(tempBufferLength)
-
-		copyData := make([]byte, tempBufferLength) // 复制
-		copy(copyData, data)
-
-		protocolData.Data = copyData
-
-		c.SetContext(nil)
-
-		return protocolData, nil
 	}
+	tempBufferLength := c.InboundBuffered() // 当前已有多少数据
+	frameDataLength := int(protocolData.DataLength)
+
+	if tempBufferLength > frameDataLength {
+		return nil, ErrIncompletePacket
+	}
+
+	// 数据够了
+	data, _ := c.Next(tempBufferLength)
+
+	copyData := make([]byte, tempBufferLength) // 复制
+	copy(copyData, data)
+
+	protocolData.Data = copyData
+
+	c.SetContext(nil)
+
+	return protocolData, nil
+
 }
 
 // 数据反解

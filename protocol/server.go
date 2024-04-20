@@ -53,7 +53,7 @@ func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 
 	protocol := NewTCPProtocol()
 
-	protocolData, err := protocol.Decode(c)
+	protocolData, err := protocol.DecodeProtocolData(c)
 
 	if err != nil {
 		if err == ErrIncompletePacket {
@@ -74,10 +74,12 @@ func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 
 	// 具体业务在 worker pool中处理
 	s.WorkerPool.Submit(func() {
-		handlerData := &HandlerContext{}
-		handlerData.ProtocolData = protocolData
-		handlerData.Conn = c
-		handlerData.Server = s
+		handlerData := InitServer(protocolData, c, s)
+
+		{
+			handlerData.MethodRegist(ACTION_PING, Ping)
+			handlerData.MethodRegist(ACTION_HEART_BEAT, HeartBeat)
+		}
 
 		s.Handler(handlerData)
 	})

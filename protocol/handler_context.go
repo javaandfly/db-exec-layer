@@ -1,20 +1,33 @@
 package protocol
 
 import (
-	"db-exec-layer/protocol/pb"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
 )
 
+type ServerHandler func(ctx *HandlerContext)
+
 type HandlerContext struct {
 	ProtocolData *ProtocolData
 
-	PingProtocolData *pb.DB_PING_REQ
+	MethodsMap map[int32][]ServerHandler
 
 	Conn gnet.Conn
 
 	Server *TcpDBServer
+}
+
+func InitServer(protocolData *ProtocolData, c gnet.Conn, server *TcpDBServer) *HandlerContext {
+	return &HandlerContext{
+		ProtocolData: protocolData,
+		Conn:         c,
+		Server:       server,
+	}
+}
+
+func (ctx *HandlerContext) MethodRegist(id int32, fn ...ServerHandler) {
+	ctx.MethodsMap[id] = fn
 }
 
 func (ctx *HandlerContext) Deadline() (deadline time.Time, ok bool) {
