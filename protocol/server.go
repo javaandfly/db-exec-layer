@@ -90,12 +90,12 @@ func NewTCPServer(port int) *TcpDBServer {
 	options := ants.Options{ExpiryDuration: time.Second * 10, Nonblocking: true}
 	defaultAntsPool, _ := ants.NewPool(DefaultAntsPoolSize, ants.WithOptions(options))
 
-	server := &TcpDBServer{}
-
-	server.Port = port
-	server.WorkerPool = defaultAntsPool
-	server.Handler = defaultHandler
-	server.ctx = context.Background()
+	server := &TcpDBServer{
+		Port:       port,
+		WorkerPool: defaultAntsPool,
+		Handler:    defaultHandler,
+		ctx:        context.Background(),
+	}
 
 	return server
 }

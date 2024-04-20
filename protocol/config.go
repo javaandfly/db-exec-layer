@@ -11,8 +11,6 @@ const (
 
 	PROTOCOL_VERSION = 0x8001 //协议版本 dec 32769
 
-	socketRingBufferSize = 1024
-
 	//协议行为定义
 	ACTION_PING            = 0x0001 // ping行为
 	ACTION_PONG            = 0x0002 // pong行为

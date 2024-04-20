@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"db-exec-layer/protocol/pb"
+	"sync"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -26,10 +27,32 @@ var defaultHandler ServerHandler = func(ctx *HandlerContext) {
 
 	fns := ctx.MethodsMap[ctx.ProtocolData.ProtoId]
 
+	var wg sync.WaitGroup
+
+	if ctx.ExecuteMult {
+		for index := range fns {
+			wg.Add(1)
+
+			fn := fns[index]
+
+			go func() {
+				defer wg.Done()
+				fn(ctx)
+			}()
+		}
+		wg.Wait()
+		return
+
+	}
+
 	for _, fn := range fns {
 		fn(ctx)
 	}
 
+}
+
+func StartMult(ctx *HandlerContext) {
+	ctx.ExecuteMult = true
 }
 
 func Ping(ctx *HandlerContext) {
