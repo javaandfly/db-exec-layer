@@ -15,6 +15,8 @@ type HandlerContext struct {
 
 	Conn gnet.Conn
 
+	ExecuteMult bool
+
 	Server *TcpDBServer
 }
 
