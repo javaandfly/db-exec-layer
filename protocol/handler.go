@@ -20,12 +20,16 @@ var defaultHandler ServerHandler = func(ctx *HandlerContext) {
 	}
 
 	defer func() {
-		if err := recover(); err != nil {
-			logrus.Errorf("func is panic: %v  proto id is %v", err, ctx.ProtocolData.ProtoId)
+		if r := recover(); r != nil {
+			logrus.Errorf("func is panic: %v  proto id is %v", r, ctx.ProtocolData.ProtoId)
 		}
 	}()
 
-	fns := ctx.MethodsMap[ctx.ProtocolData.ProtoId]
+	fns, ok := ctx.Server.MethodsMap[ctx.ProtocolData.ProtoId]
+	if !ok {
+		logrus.Errorf("func is not find, proto id is %v", ctx.ProtocolData.ProtoId)
+		return
+	}
 
 	var wg sync.WaitGroup
 
@@ -66,16 +70,11 @@ func Ping(ctx *HandlerContext) {
 	req := &pb.DB_PING_REQ{}
 	err := proto.Unmarshal(ctx.ProtocolData.Data, req)
 	if err != nil {
-		logrus.Infof("read data is err:%v", err)
+		logrus.Errorf("read data is err:%v", err)
 		return
 	}
 
 	logrus.Infof("req is read from server %v", req)
-
-	if err != nil {
-		logrus.Infof("read data is err:%v", err)
-		return
-	}
 
 	rsp := &pb.DB_PING_RESP{
 		TimeStamp: time.Now().UnixMilli(),
@@ -83,24 +82,16 @@ func Ping(ctx *HandlerContext) {
 
 	protoData, err := proto.Marshal(rsp)
 	if err != nil {
-		logrus.Infof("paoro marshal pong , %v, err:%v", protoData, err)
+		logrus.Errorf("paoro marshal pong , %v, err:%v", protoData, err)
 		return
 	}
 
 	pongData, err := protocol.EncodeData(ACTION_PONG,
 		protoData)
 	if err != nil {
-		logrus.Infof("server encode pong , %v, err:%v", pongData, err)
+		logrus.Errorf("server encode pong , %v, err:%v", pongData, err)
 		return
 	}
-
-	data, err := protocol.DecodeFrame(pongData)
-	if err != nil {
-		logrus.Infof("Decode pong , %v, err:%v", pongData, err)
-		return
-	}
-
-	logrus.Infof("data is %#v", data)
 
 	if ctx.Conn != nil {
 		ctx.Conn.AsyncWrite(pongData, func(c gnet.Conn, err error) error { return nil })
@@ -108,6 +99,7 @@ func Ping(ctx *HandlerContext) {
 }
 
 func HeartBeat(ctx *HandlerContext) {
+
 	if ctx.ProtocolData == nil {
 		return
 	}
@@ -117,7 +109,7 @@ func HeartBeat(ctx *HandlerContext) {
 	req := &pb.DB_HEART_BEAT_REQ{}
 	err := proto.Unmarshal(ctx.ProtocolData.Data, req)
 	if err != nil {
-		logrus.Infof("read data is err:%v", err)
+		logrus.Errorf("read data is err:%v", err)
 		return
 	}
 
@@ -130,14 +122,18 @@ func HeartBeat(ctx *HandlerContext) {
 
 	protoData, err := proto.Marshal(rsp)
 	if err != nil {
-		logrus.Infof("paoro marshal pong , %v, err:%v", protoData, err)
+		logrus.Errorf("paoro marshal pong , %v, err:%v", protoData, err)
 		return
 	}
 
 	pongData, err := protocol.EncodeData(ACTION_HEART_BEAT_RESP,
 		protoData)
 	if err != nil {
-		logrus.Infof("server encode pong , %v, err:%v", pongData, err)
+		logrus.Errorf("server encode pong , %v, err:%v", pongData, err)
 		return
+	}
+
+	if ctx.Conn != nil {
+		ctx.Conn.AsyncWrite(pongData, func(c gnet.Conn, err error) error { return nil })
 	}
 }

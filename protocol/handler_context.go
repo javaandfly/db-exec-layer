@@ -11,8 +11,6 @@ type ServerHandler func(ctx *HandlerContext)
 type HandlerContext struct {
 	ProtocolData *ProtocolData
 
-	MethodsMap map[int32][]ServerHandler
-
 	Conn gnet.Conn
 
 	ExecuteMult bool
@@ -26,10 +24,6 @@ func InitServer(protocolData *ProtocolData, c gnet.Conn, server *TcpDBServer) *H
 		Conn:         c,
 		Server:       server,
 	}
-}
-
-func (ctx *HandlerContext) MethodRegist(id int32, fn ...ServerHandler) {
-	ctx.MethodsMap[id] = fn
 }
 
 func (ctx *HandlerContext) Deadline() (deadline time.Time, ok bool) {

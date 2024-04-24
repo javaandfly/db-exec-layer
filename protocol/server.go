@@ -2,7 +2,10 @@ package protocol
 
 import (
 	"context"
+	"os"
+	"os/signal"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/panjf2000/ants/v2"
@@ -16,9 +19,15 @@ type TcpDBServer struct {
 
 	ConnNum int32
 
+	MethodsMap map[int32][]ServerHandler
+
 	Handler ServerHandler
 
 	ctx context.Context
+}
+
+func (tcphs *TcpDBServer) MethodRegist(id int32, fn ...ServerHandler) {
+	tcphs.MethodsMap[id] = fn
 }
 
 func (tcphs *TcpDBServer) OnBoot(eng gnet.Engine) (action gnet.Action) {
@@ -51,6 +60,8 @@ func (tcphs *TcpDBServer) OnTick() (delay time.Duration, action gnet.Action) {
 
 func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 
+	logrus.Info("on traffic is run")
+
 	protocol := NewTCPProtocol()
 
 	protocolData, err := protocol.DecodeProtocolData(c)
@@ -76,12 +87,8 @@ func (s *TcpDBServer) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	s.WorkerPool.Submit(func() {
 		handlerData := InitServer(protocolData, c, s)
 
-		{
-			handlerData.MethodRegist(ACTION_PING, Ping)
-			handlerData.MethodRegist(ACTION_HEART_BEAT, HeartBeat)
-		}
-
 		s.Handler(handlerData)
+
 	})
 	return
 }
@@ -94,14 +101,45 @@ func NewTCPServer(port int) *TcpDBServer {
 		Port:       port,
 		WorkerPool: defaultAntsPool,
 		Handler:    defaultHandler,
+		MethodsMap: make(map[int32][]ServerHandler),
 		ctx:        context.Background(),
+	}
+
+	{
+		server.MethodRegist(ACTION_PING, Ping)
+		server.MethodRegist(ACTION_HEART_BEAT, HeartBeat)
 	}
 
 	return server
 }
 
 // 启动服务
-func Run(server *TcpDBServer, protoAddr string, opts ...gnet.Option) error {
+func Run(ctx context.Context, server *TcpDBServer, protoAddr string, opts ...gnet.Option) error {
+
+	go func() {
+		// 监听系统信号量
+		osSignal := make(chan os.Signal, 1)
+		signal.Notify(osSignal, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+
+		for {
+			s, ok := <-osSignal
+			if !ok {
+				break
+			}
+			switch s {
+			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT,
+				syscall.SIGHUP:
+				err := gnet.Stop(ctx, protoAddr)
+				if err != nil {
+					logrus.Errorf("Failed to stop %s: %v", protoAddr, err)
+				}
+
+				return
+			default:
+			}
+		}
+	}()
 
 	return gnet.Run(server, protoAddr, opts...)
+
 }

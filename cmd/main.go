@@ -67,12 +67,11 @@ func Start(c *cli.Context) error {
 	// 	return err
 	// }
 
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	// wait for signals
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-
 		<-sigs
 		cancel()
 	}()
@@ -85,7 +84,7 @@ func Start(c *cli.Context) error {
 
 	tcpServer := protocol.NewTCPServer(cfg.ServerConfig.Port)
 
-	err = protocol.Run(tcpServer, fmt.Sprintf("tcp://:%d", cfg.ServerConfig.Port), options...)
+	err = protocol.Run(ctx, tcpServer, fmt.Sprintf("tcp://:%d", cfg.ServerConfig.Port), options...)
 	if err != nil {
 		logrus.Errorf("启动失败:%+v", err)
 		return err
