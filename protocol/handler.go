@@ -36,7 +36,7 @@ var defaultHandler ServerHandler = func(ctx *HandlerContext) {
 	if ctx.ExecuteMult {
 		for index := range fns {
 			wg.Add(1)
-
+			//确保执行的是当前函数，不能用 _,fn := range fns 的方式
 			fn := fns[index]
 
 			go func() {
